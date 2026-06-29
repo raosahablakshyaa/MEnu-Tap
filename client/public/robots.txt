@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /menu/
+Disallow: /owner/
+Disallow: /admin/
+Disallow: /kitchen/
+Disallow: /api/
+Disallow: /dashboard/
+
+Sitemap: https://tapmenu.app/sitemap.xml
