@@ -28,7 +28,7 @@ app.use(cors({
   origin: config.CORS_ORIGIN.split(',').map((o) => o.trim()),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Restaurant-Id', 'X-Request-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Restaurant-Id', 'X-Request-Id', 'X-Session-Id'],
   exposedHeaders: ['X-Request-Id'],
 }));
 

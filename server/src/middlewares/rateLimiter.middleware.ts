@@ -4,7 +4,8 @@ import { HTTP_STATUS } from '../constants';
 
 export const globalRateLimiter = rateLimit({
   windowMs: config.RATE_LIMIT_WINDOW_MS,
-  max: config.RATE_LIMIT_MAX_REQUESTS,
+  max: config.NODE_ENV === 'development' ? 10000 : config.RATE_LIMIT_MAX_REQUESTS,
+  skip: () => config.NODE_ENV === 'development',
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -17,13 +18,14 @@ export const globalRateLimiter = rateLimit({
 });
 
 export const authRateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 10,
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: config.NODE_ENV === 'development' ? 1000 : 10, // 1000 in dev, 10 in prod
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => config.NODE_ENV === 'development', // skip entirely in dev
   message: {
     success: false,
-    message: 'Too many authentication attempts, please try again after 15 minutes',
+    message: 'Too many authentication attempts, please try again after a minute',
     data: null,
     errors: null,
   },

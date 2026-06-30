@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Clock, ChefHat, Bell, Star, Loader2, ArrowLeft, Phone } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
@@ -27,7 +27,9 @@ function getStepIndex(status: OrderStatus) {
 export default function OrderTrackingPage() {
   const { token, orderId } = useParams() as { token: string; orderId: string };
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { sessionId, qrData, initSession } = useCustomer();
+  const orderSessionId = searchParams.get('sid') || sessionId;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,13 +51,13 @@ export default function OrderTrackingPage() {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchOrder = useCallback(async () => {
-    if (!sessionId) return;
+    if (!orderSessionId) return;
     try {
-      const res = await orderApi.getById(orderId, sessionId);
+      const res = await orderApi.getById(orderId, orderSessionId);
       setOrder(res.data);
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [orderId, sessionId]);
+  }, [orderId, orderSessionId]);
 
   useEffect(() => { fetchOrder(); }, [fetchOrder]);
 
@@ -69,11 +71,11 @@ export default function OrderTrackingPage() {
 
   // Socket.IO live tracking
   useEffect(() => {
-    if (!sessionId) return;
-    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://localhost:5000';
+    if (!orderSessionId) return;
+    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') ?? 'http://localhost:5001';
 
     const socket: Socket = io(apiBase, {
-      auth: { sessionId },
+      auth: { sessionId: orderSessionId },
       transports: ['websocket'],
     });
 
@@ -91,13 +93,13 @@ export default function OrderTrackingPage() {
       socket.emit('order:untrack', orderId);
       socket.disconnect();
     };
-  }, [sessionId, orderId]);
+  }, [orderSessionId, orderId]);
 
   const submitFeedback = async () => {
-    if (!sessionId || !order) return;
+    if (!orderSessionId || !order) return;
     setSubmittingFeedback(true);
     try {
-      await orderApi.submitFeedback(order._id, sessionId, {
+      await orderApi.submitFeedback(order._id, orderSessionId, {
         foodRating: food,
         serviceRating: service,
         ambienceRating: ambience,
@@ -215,7 +217,7 @@ export default function OrderTrackingPage() {
               <div className="flex-1 min-w-0">
                 <p className="text-zinc-800 truncate">{item.quantity}× {item.name}</p>
                 {item.variantName && <p className="text-xs text-zinc-400">{item.variantName}</p>}
-                {item.notes && <p className="text-[11px] italic text-zinc-400">"{item.notes}"</p>}
+                {item.notes && <p className="text-[11px] italic text-zinc-400">&quot;{item.notes}&quot;</p>}
               </div>
               <span className="shrink-0 ml-2 text-zinc-700 font-medium">₹{item.subtotal.toFixed(2)}</span>
             </div>

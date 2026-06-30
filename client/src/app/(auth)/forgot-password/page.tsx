@@ -1,21 +1,13 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import { UtensilsCrossed, ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -27,82 +19,83 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
-
     try {
       await authApi.forgotPassword(email);
       setSuccess(true);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('An unexpected error occurred');
-      }
+      setError(err instanceof ApiError ? err.message : 'An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
-      >
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="text-3xl font-bold text-orange-600">TapMenu</span>
-          </Link>
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--background)' }}>
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="mb-8 flex items-center justify-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: 'var(--primary)' }}>
+            <UtensilsCrossed size={17} className="text-white" />
+          </div>
+          <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>TapMenu</span>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Reset password</CardTitle>
-            <CardDescription>
-              Enter your email and we&apos;ll send you a reset link
-            </CardDescription>
-          </CardHeader>
+        <div
+          className="rounded-xl p-8"
+          style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)' }}
+        >
           {success ? (
-            <CardContent>
-              <div className="rounded-md bg-green-50 p-4 text-sm text-green-700">
-                If an account exists with that email, you will receive a password reset link
-                shortly.
-              </div>
-              <Link href="/login" className="mt-4 block text-center text-sm text-orange-600 hover:underline">
-                Back to sign in
-              </Link>
-            </CardContent>
-          ) : (
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                {error && (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="you@restaurant.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: 'var(--primary-light)' }}>
+                  <CheckCircle2 size={28} style={{ color: 'var(--primary)' }} />
                 </div>
-              </CardContent>
-              <CardFooter className="flex flex-col gap-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
+              </div>
+              <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Check your email</h2>
+              <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                If an account exists with <strong>{email}</strong>, you will receive a password reset link shortly.
+              </p>
+              <Link
+                href="/login"
+                className="mt-4 inline-flex items-center gap-2 text-sm font-medium hover:underline"
+                style={{ color: 'var(--primary)' }}
+              >
+                <ArrowLeft size={14} /> Back to sign in
+              </Link>
+            </div>
+          ) : (
+            <>
+              <div className="mb-6">
+                <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Reset your password</h2>
+                <p className="mt-1 text-sm" style={{ color: 'var(--foreground-muted)' }}>
+                  Enter your email and we&apos;ll send you a reset link
+                </p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <div className="rounded-lg px-4 py-3 text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                    {error}
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <Label>Email address</Label>
+                  <Input type="email" placeholder="you@restaurant.com" value={email} onChange={e => setEmail(e.target.value)} required />
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                   {isLoading ? 'Sending...' : 'Send reset link'}
                 </Button>
-                <Link href="/login" className="text-center text-sm text-gray-500 hover:text-orange-600">
-                  Back to sign in
+              </form>
+
+              <div className="mt-5 text-center">
+                <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-medium hover:underline" style={{ color: 'var(--foreground-muted)' }}>
+                  <ArrowLeft size={14} /> Back to sign in
                 </Link>
-              </CardFooter>
-            </form>
+              </div>
+            </>
           )}
-        </Card>
-      </motion.div>
+        </div>
+      </div>
     </div>
   );
 }

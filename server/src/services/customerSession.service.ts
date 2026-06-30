@@ -137,18 +137,6 @@ export class CustomerSessionService {
     const qr = await QrCode.findOne({ token, isActive: true, isDeleted: false });
     if (!qr) throw new NotFoundError('QR code not found');
 
-    // Reuse active session for same table/restaurant if recent
-    const existing = await CustomerSession.findOne({
-      restaurantId: qr.restaurantId,
-      tableId: qr.tableId,
-      isActive: true,
-      expiresAt: { $gt: new Date() },
-      ipAddress,
-    });
-    if (existing) {
-      return { sessionId: existing.sessionId, expiresAt: existing.expiresAt };
-    }
-
     const sessionId = uuidv4();
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
     const device = detectDevice(userAgent);
@@ -188,9 +176,9 @@ export class CustomerSessionService {
     const session = await CustomerSession.findOne({ sessionId, isActive: true });
     if (!session) throw new NotFoundError('Session not found or expired');
 
-    if (data.name) session.name = data.name;
-    if (data.phone) session.phone = data.phone;
-    if (data.email) session.email = data.email;
+    if (data.name) session.name = data.name.trim();
+    if (data.phone) session.phone = data.phone.trim();
+    if (data.email) session.email = data.email.trim();
     if (data.birthday) session.birthday = new Date(data.birthday);
     if (data.anniversary) session.anniversary = new Date(data.anniversary);
     session.consentGiven = data.consentGiven;

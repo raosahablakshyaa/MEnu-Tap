@@ -18,11 +18,12 @@ interface ExecutiveData {
 
 function StatCard({ label, value, sub, trend }: { label: string; value: string; sub?: string; trend?: 'up' | 'down' | 'neutral' }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
-      <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-white">{value}</p>
+    <div className="stat-card">
+      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--foreground-muted)' }}>{label}</p>
+      <p className="mt-1 text-2xl font-bold" style={{ color: 'var(--foreground)' }}>{value}</p>
       {sub && (
-        <p className={`mt-1 flex items-center gap-1 text-xs ${trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-500' : 'text-zinc-500'}`}>
+        <p className="mt-1 flex items-center gap-1 text-xs font-medium"
+          style={{ color: trend === 'up' ? 'var(--success)' : trend === 'down' ? 'var(--danger)' : 'var(--foreground-muted)' }}>
           {trend === 'up' ? <TrendingUp className="h-3 w-3" /> : trend === 'down' ? <TrendingDown className="h-3 w-3" /> : null}
           {sub}
         </p>
@@ -32,15 +33,15 @@ function StatCard({ label, value, sub, trend }: { label: string; value: string; 
 }
 
 function ScoreBar({ label, score }: { label: string; score: number }) {
-  const color = score >= 75 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500';
+  const barColor = score >= 75 ? 'var(--success)' : score >= 50 ? 'var(--warning)' : 'var(--danger)';
   return (
     <div>
       <div className="mb-1 flex justify-between text-xs">
-        <span className="text-zinc-600 dark:text-zinc-400">{label}</span>
-        <span className="font-semibold text-zinc-800 dark:text-zinc-200">{score}/100</span>
+        <span style={{ color: 'var(--foreground-muted)' }}>{label}</span>
+        <span className="font-semibold" style={{ color: 'var(--foreground)' }}>{score}/100</span>
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${score}%` }} />
+      <div className="h-1.5 w-full overflow-hidden rounded-full" style={{ background: 'var(--surface-raised)' }}>
+        <div className="h-full rounded-full transition-all" style={{ width: `${score}%`, background: barColor }} />
       </div>
     </div>
   );
@@ -55,29 +56,25 @@ export default function ExecutiveDashboardPage() {
     try {
       const res = await aiApi.executiveDashboard();
       setData((res as { data: ExecutiveData }).data);
-    } catch {
-      // handled silently
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
   const handleGenerate = async () => {
     setGenerating(true);
-    try {
-      await aiApi.generateReport();
-      await load();
-    } finally {
-      setGenerating(false);
-    }
+    try { await aiApi.generateReport(); await load(); } finally { setGenerating(false); }
   };
 
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-24 skeleton" />)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="h-56 skeleton" /><div className="h-56 skeleton" />
+        </div>
       </div>
     );
   }
@@ -85,68 +82,70 @@ export default function ExecutiveDashboardPage() {
   const fmt = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-[1400px]">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Executive Dashboard</h1>
-          <p className="text-sm text-zinc-500">Real-time business overview</p>
+          <h1 className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>Executive Dashboard</h1>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--foreground-muted)' }}>Real-time business overview</p>
         </div>
         <button
           onClick={handleGenerate}
           disabled={generating}
-          className="flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+          className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: 'var(--primary)' }}
         >
           <RefreshCw className={`h-4 w-4 ${generating ? 'animate-spin' : ''}`} />
           Generate AI Report
         </button>
       </div>
 
-      {/* Today KPIs */}
+      {/* KPIs */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <StatCard label="Today Revenue" value={fmt(data?.today.revenue ?? 0)} />
-        <StatCard label="Today Orders" value={String(data?.today.orders ?? 0)} />
-        <StatCard label="Avg Order Value" value={fmt(data?.today.avgOrderValue ?? 0)} />
-        <StatCard label="Monthly Revenue" value={fmt(data?.monthly.revenue ?? 0)} sub={`${data?.monthly.growth ?? 0}% vs last month`} trend={(data?.monthly.growth ?? 0) >= 0 ? 'up' : 'down'} />
-        <StatCard label="Monthly Profit" value={fmt(data?.monthly.profit ?? 0)} sub={`${data?.monthly.profitMargin ?? 0}% margin`} />
-        <StatCard label="Low Stock" value={String(data?.alerts.lowStockIngredients ?? 0)} sub="ingredients" trend={(data?.alerts.lowStockIngredients ?? 0) > 0 ? 'down' : 'neutral'} />
+        <StatCard label="Today Revenue"    value={fmt(data?.today.revenue ?? 0)} />
+        <StatCard label="Today Orders"     value={String(data?.today.orders ?? 0)} />
+        <StatCard label="Avg Order Value"  value={fmt(data?.today.avgOrderValue ?? 0)} />
+        <StatCard label="Monthly Revenue"  value={fmt(data?.monthly.revenue ?? 0)} sub={`${data?.monthly.growth ?? 0}% vs last month`} trend={(data?.monthly.growth ?? 0) >= 0 ? 'up' : 'down'} />
+        <StatCard label="Monthly Profit"   value={fmt(data?.monthly.profit ?? 0)} sub={`${data?.monthly.profitMargin ?? 0}% margin`} />
+        <StatCard label="Low Stock"        value={String(data?.alerts.lowStockIngredients ?? 0)} sub="ingredients" trend={(data?.alerts.lowStockIngredients ?? 0) > 0 ? 'down' : 'neutral'} />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* AI Health Scores */}
         {data?.aiReport && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="content-card p-5">
             <div className="mb-4 flex items-center gap-2">
-              <Brain className="h-5 w-5 text-purple-500" />
-              <h2 className="font-semibold text-zinc-900 dark:text-white">Business Health Scores</h2>
-              <span className="ml-auto rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+              <Brain className="h-5 w-5" style={{ color: '#8b5cf6' }} />
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Business Health Scores</h2>
+              <span className="ml-auto rounded-full px-2 py-0.5 text-xs font-semibold" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
                 Overall: {data.aiReport.scores.overall}/100
               </span>
             </div>
             <div className="space-y-3">
-              <ScoreBar label="Revenue" score={data.aiReport.scores.revenue} />
+              <ScoreBar label="Revenue"    score={data.aiReport.scores.revenue} />
               <ScoreBar label="Operations" score={data.aiReport.scores.operations} />
-              <ScoreBar label="Customers" score={data.aiReport.scores.customers} />
-              <ScoreBar label="Inventory" score={data.aiReport.scores.inventory} />
-              <ScoreBar label="Kitchen" score={data.aiReport.scores.kitchen} />
+              <ScoreBar label="Customers"  score={data.aiReport.scores.customers} />
+              <ScoreBar label="Inventory"  score={data.aiReport.scores.inventory} />
+              <ScoreBar label="Kitchen"    score={data.aiReport.scores.kitchen} />
             </div>
           </div>
         )}
 
         {/* AI Recommendations */}
         {data?.aiReport && (
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="content-card p-5">
             <div className="mb-4 flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              <h2 className="font-semibold text-zinc-900 dark:text-white">AI Recommendations</h2>
+              <AlertTriangle className="h-5 w-5" style={{ color: 'var(--warning)' }} />
+              <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>AI Recommendations</h2>
             </div>
             <div className="space-y-3">
               {data.aiReport.topRecommendations.length === 0 && (
-                <p className="text-sm text-zinc-500">No high-priority recommendations. Business is running well!</p>
+                <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>No high-priority recommendations. Business is running well!</p>
               )}
               {data.aiReport.topRecommendations.map((r, i) => (
-                <div key={i} className="rounded-lg border border-amber-100 bg-amber-50 p-3 dark:border-amber-900/30 dark:bg-amber-900/10">
-                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{r.action}</p>
-                  <p className="mt-0.5 text-xs text-zinc-500">{r.reason}</p>
+                <div key={i} className="rounded-lg p-3" style={{ background: 'var(--surface-raised)', border: '1px solid var(--border)' }}>
+                  <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{r.action}</p>
+                  <p className="mt-0.5 text-xs" style={{ color: 'var(--foreground-muted)' }}>{r.reason}</p>
                 </div>
               ))}
             </div>
@@ -156,18 +155,20 @@ export default function ExecutiveDashboardPage() {
 
       {/* AI Insights */}
       {data?.aiReport && data.aiReport.topInsights.length > 0 && (
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="content-card p-5">
           <div className="mb-4 flex items-center gap-2">
-            <Brain className="h-5 w-5 text-indigo-500" />
-            <h2 className="font-semibold text-zinc-900 dark:text-white">Key Insights</h2>
+            <Brain className="h-5 w-5" style={{ color: '#6366f1' }} />
+            <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Key Insights</h2>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {data.aiReport.topInsights.map((ins, i) => (
-              <div key={i} className="flex items-start gap-3 rounded-lg border border-zinc-100 p-3 dark:border-zinc-800">
-                {ins.trend === 'up' ? <TrendingUp className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" /> :
-                  ins.trend === 'down' ? <TrendingDown className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" /> :
-                  <ShoppingBag className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />}
-                <p className="text-sm text-zinc-700 dark:text-zinc-300">{ins.insight}</p>
+              <div key={i} className="flex items-start gap-3 rounded-lg p-3" style={{ border: '1px solid var(--border)', background: 'var(--surface-raised)' }}>
+                {ins.trend === 'up'
+                  ? <TrendingUp className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--success)' }} />
+                  : ins.trend === 'down'
+                  ? <TrendingDown className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--danger)' }} />
+                  : <ShoppingBag className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--info)' }} />}
+                <p className="text-xs" style={{ color: 'var(--foreground-muted)' }}>{ins.insight}</p>
               </div>
             ))}
           </div>
@@ -175,28 +176,23 @@ export default function ExecutiveDashboardPage() {
       )}
 
       {/* Monthly Summary */}
-      <div className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="content-card p-5">
         <div className="mb-4 flex items-center gap-2">
-          <Users className="h-5 w-5 text-blue-500" />
-          <h2 className="font-semibold text-zinc-900 dark:text-white">This Month Summary</h2>
+          <Users className="h-5 w-5" style={{ color: 'var(--info)' }} />
+          <h2 className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>This Month Summary</h2>
         </div>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{fmt(data?.monthly.revenue ?? 0)}</p>
-            <p className="text-xs text-zinc-500">Revenue</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{fmt(data?.monthly.expenses ?? 0)}</p>
-            <p className="text-xs text-zinc-500">Expenses</p>
-          </div>
-          <div className="text-center">
-            <p className={`text-2xl font-bold ${(data?.monthly.profit ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>{fmt(data?.monthly.profit ?? 0)}</p>
-            <p className="text-xs text-zinc-500">Profit</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold text-zinc-900 dark:text-white">{data?.monthly.orders ?? 0}</p>
-            <p className="text-xs text-zinc-500">Orders</p>
-          </div>
+        <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
+          {[
+            { label: 'Revenue',  value: fmt(data?.monthly.revenue ?? 0) },
+            { label: 'Expenses', value: fmt(data?.monthly.expenses ?? 0) },
+            { label: 'Profit',   value: fmt(data?.monthly.profit ?? 0), colored: true },
+            { label: 'Orders',   value: String(data?.monthly.orders ?? 0) },
+          ].map(({ label, value, colored }) => (
+            <div key={label} className="text-center">
+              <p className="text-xl font-bold" style={{ color: colored ? ((data?.monthly.profit ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--foreground)' }}>{value}</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--foreground-muted)' }}>{label}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -12,25 +12,20 @@ interface StatCardProps {
 
 export function StatCard({ title, value, subtitle, icon: Icon, trend, className }: StatCardProps) {
   return (
-    <div
-      className={cn(
-        'rounded-2xl border border-zinc-200/50 bg-white/60 p-5 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-zinc-900/40',
-        className
-      )}
-    >
+    <div className={cn('stat-card', className)}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400">{title}</p>
-          <p className="mt-1 text-2xl font-bold tracking-tight">{value}</p>
-          {subtitle && <p className="mt-0.5 text-xs text-zinc-400">{subtitle}</p>}
+          <p className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--foreground-muted)' }}>{title}</p>
+          <p className="mt-1 text-2xl font-bold tracking-tight" style={{ color: 'var(--foreground)' }}>{value}</p>
+          {subtitle && <p className="mt-0.5 text-xs" style={{ color: 'var(--foreground-subtle)' }}>{subtitle}</p>}
           {trend && (
-            <p className={cn('mt-1 text-xs font-medium', trend.positive ? 'text-emerald-500' : 'text-red-500')}>
+            <p className={cn('mt-1 text-xs font-semibold', trend.positive ? 'text-emerald-500' : 'text-red-500')}>
               {trend.positive ? '+' : ''}{trend.value}%
             </p>
           )}
         </div>
-        <div className="rounded-xl bg-orange-500/10 p-2.5">
-          <Icon size={20} className="text-orange-500" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ background: 'var(--primary-light)' }}>
+          <Icon size={18} style={{ color: 'var(--primary)' }} />
         </div>
       </div>
     </div>

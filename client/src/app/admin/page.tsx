@@ -54,7 +54,7 @@ export default function AdminDashboardPage() {
       <div>
         <AdminHeader title="Dashboard" />
         <div className="flex h-96 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-t-transparent" style={{ borderColor: 'var(--border)', borderTopColor: 'var(--primary)' }} />
         </div>
       </div>
     );
@@ -86,35 +86,35 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-5 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-zinc-900/40">
-            <h3 className="mb-4 text-sm font-semibold">Top Restaurants</h3>
+          <div className="content-card p-5">
+            <h3 className="mb-4 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Top Restaurants</h3>
             {stats.topRestaurants.length === 0 ? (
-              <p className="text-sm text-zinc-400">No revenue data yet</p>
+              <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>No revenue data yet</p>
             ) : (
               <div className="space-y-3">
                 {stats.topRestaurants.map((r, i) => (
                   <div key={r.restaurantId} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-500/10 text-xs font-bold text-orange-500">{i + 1}</span>
+                      <span className="flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>{i + 1}</span>
                       <span className="text-sm font-medium">{r.name}</span>
                     </div>
-                    <span className="text-sm font-semibold text-emerald-500">{formatCurrency(r.revenue)}</span>
+                    <span className="text-sm font-semibold" style={{ color: 'var(--success)' }}>{formatCurrency(r.revenue)}</span>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          <div className="rounded-2xl border border-zinc-200/50 bg-white/60 p-5 backdrop-blur-xl dark:border-zinc-800/50 dark:bg-zinc-900/40">
-            <h3 className="mb-4 text-sm font-semibold">Recently Registered</h3>
+          <div className="content-card p-5">
+            <h3 className="mb-4 text-sm font-semibold" style={{ color: 'var(--foreground)' }}>Recently Registered</h3>
             {stats.recentRestaurants.length === 0 ? (
-              <p className="text-sm text-zinc-400">No restaurants yet</p>
+              <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>No restaurants yet</p>
             ) : (
               <div className="space-y-3">
                 {(stats.recentRestaurants as { name: string; status: string; createdAt: string }[]).map((r, i) => (
                   <div key={i} className="flex items-center justify-between">
                     <span className="text-sm font-medium">{r.name}</span>
-                    <span className="text-xs capitalize text-zinc-400">{r.status}</span>
+                    <span className="text-xs capitalize" style={{ color: 'var(--foreground-muted)' }}>{r.status}</span>
                   </div>
                 ))}
               </div>

@@ -8,15 +8,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const isLoginPage = pathname === '/admin/login';
 
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
+  if (isLoginPage) return <>{children}</>;
 
   return (
     <AdminGuard>
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
+      <div className="min-h-screen" style={{ background: 'var(--background)' }}>
         <AdminSidebar />
-        <main className="pl-64 transition-all duration-300">{children}</main>
+        <main className="pl-[220px] transition-all duration-300" style={{ minHeight: '100vh' }}>
+          {children}
+        </main>
       </div>
     </AdminGuard>
   );

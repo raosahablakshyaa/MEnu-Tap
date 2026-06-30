@@ -22,8 +22,6 @@ interface ServiceHealth {
 }
 
 export async function getHealthStatus(): Promise<HealthStatus> {
-  const start = Date.now();
-
   // MongoDB ping
   let dbHealth: ServiceHealth;
   try {

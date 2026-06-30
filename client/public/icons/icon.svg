@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="TapMenu">
+  <rect width="512" height="512" rx="112" fill="#ea580c"/>
+  <circle cx="164" cy="176" r="46" fill="#fff7ed" opacity=".96"/>
+  <path d="M276 106v300" stroke="#fff7ed" stroke-width="34" stroke-linecap="round"/>
+  <path d="M354 112v294" stroke="#fff7ed" stroke-width="34" stroke-linecap="round"/>
+  <path d="M276 106c0 62 78 62 78 0" fill="none" stroke="#fff7ed" stroke-width="34" stroke-linecap="round"/>
+  <path d="M164 222v184" stroke="#fff7ed" stroke-width="34" stroke-linecap="round"/>
+  <path d="M122 130c-28 44-28 88 0 132" fill="none" stroke="#fff7ed" stroke-width="22" stroke-linecap="round"/>
+  <path d="M206 130c28 44 28 88 0 132" fill="none" stroke="#fff7ed" stroke-width="22" stroke-linecap="round"/>
+</svg>

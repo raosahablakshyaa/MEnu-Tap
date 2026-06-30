@@ -25,7 +25,7 @@ export const restaurantApi = {
     formData.append('file', file);
     formData.append('type', type);
     const token = apiClient.getAccessToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/restaurant/onboarding/upload`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1'}/restaurant/onboarding/upload`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',

@@ -84,7 +84,7 @@ export default function CartPage() {
                   {item.addons.length > 0 && (
                     <p className="text-[11px] text-zinc-400">{item.addons.map(a => a.name).join(', ')}</p>
                   )}
-                  {item.notes && <p className="mt-0.5 text-[11px] italic text-zinc-400">"{item.notes}"</p>}
+                  {item.notes && <p className="mt-0.5 text-[11px] italic text-zinc-400">&quot;{item.notes}&quot;</p>}
                 </div>
                 <button onClick={() => removeFromCart(item._id)}
                   className="rounded-xl p-1.5 text-red-400 hover:bg-red-50">

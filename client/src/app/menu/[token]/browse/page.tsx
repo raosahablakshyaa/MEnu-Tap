@@ -333,7 +333,7 @@ function MenuItemCard({
             <FoodBadge type={item.foodType} />
             {item.isChefRecommended && (
               <span className="flex items-center gap-0.5 rounded border border-purple-300 px-1 py-0.5 text-[10px] font-semibold text-purple-700">
-                <Flame size={8} /> Chef's Pick
+                <Flame size={8} /> Chef&apos;s Pick
               </span>
             )}
           </div>

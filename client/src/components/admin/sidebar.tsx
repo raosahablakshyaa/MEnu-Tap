@@ -10,17 +10,17 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 
 const navItems = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/restaurants', label: 'Restaurants', icon: Store },
+  { href: '/admin',               label: 'Dashboard',     icon: LayoutDashboard },
+  { href: '/admin/restaurants',   label: 'Restaurants',   icon: Store },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: CreditCard },
-  { href: '/admin/revenue', label: 'Revenue', icon: IndianRupee },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
+  { href: '/admin/revenue',       label: 'Revenue',       icon: IndianRupee },
+  { href: '/admin/users',         label: 'Users',         icon: Users },
+  { href: '/admin/coupons',       label: 'Coupons',       icon: Ticket },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
-  { href: '/admin/support', label: 'Support', icon: HeadphonesIcon },
-  { href: '/admin/audit-logs', label: 'Audit Logs', icon: ScrollText },
-  { href: '/admin/reports', label: 'Reports', icon: FileText },
-  { href: '/admin/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/support',       label: 'Support',       icon: HeadphonesIcon },
+  { href: '/admin/audit-logs',    label: 'Audit Logs',    icon: ScrollText },
+  { href: '/admin/reports',       label: 'Reports',       icon: FileText },
+  { href: '/admin/settings',      label: 'Settings',      icon: Settings },
 ];
 
 export function AdminSidebar() {
@@ -29,50 +29,52 @@ export function AdminSidebar() {
 
   return (
     <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-zinc-200/50 bg-white/70 backdrop-blur-xl transition-all duration-300 dark:border-zinc-800/50 dark:bg-zinc-950/70',
-        collapsed ? 'w-[72px]' : 'w-64'
-      )}
+      className={cn('fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-300 ease-in-out', collapsed ? 'w-[60px]' : 'w-[220px]')}
+      style={{ background: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
     >
-      <div className="flex h-16 items-center justify-between border-b border-zinc-200/50 px-4 dark:border-zinc-800/50">
+      {/* Logo */}
+      <div className="flex h-[56px] items-center justify-between px-4 flex-shrink-0" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
         {!collapsed && (
-          <Link href="/admin" className="text-xl font-bold tracking-tight text-orange-500">
-            TapMenu
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🍽️</span>
+            <div>
+              <p className="text-[13px] font-bold leading-none" style={{ color: '#fef3c7', fontFamily: 'Playfair Display, Georgia, serif' }}>TapMenu</p>
+              <p className="text-[9px] mt-0.5 uppercase tracking-widest" style={{ color: 'var(--sidebar-text)', opacity: 0.55 }}>Super Admin</p>
+            </div>
+          </div>
         )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
+        {collapsed && <span className="mx-auto text-xl">🍽️</span>}
+        {!collapsed && (
+          <button onClick={() => setCollapsed(true)} className="ml-2 rounded-md p-1" style={{ color: 'var(--sidebar-text)' }}>
+            <ChevronLeft size={14} />
+          </button>
+        )}
+        {collapsed && (
+          <button onClick={() => setCollapsed(false)}
+            className="absolute -right-3 top-[72px] z-10 flex h-6 w-6 items-center justify-center rounded-full border shadow-sm"
+            style={{ background: 'var(--sidebar-bg)', borderColor: 'var(--sidebar-border)', color: 'var(--sidebar-text)' }}>
+            <ChevronRight size={12} />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-          const Icon = item.icon;
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href || (href !== '/admin' && pathname.startsWith(href));
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
-                isActive
-                  ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
-                  : 'text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/50'
-              )}
-            >
-              <Icon size={20} />
-              {!collapsed && <span>{item.label}</span>}
+            <Link key={href} href={href} title={collapsed ? label : undefined}
+              className={cn('sidebar-nav-item', active && 'active', collapsed && 'justify-center px-0')}>
+              <Icon size={15} className="shrink-0" style={{ color: active ? 'var(--sidebar-active-accent)' : 'var(--sidebar-text)' }} />
+              {!collapsed && <span style={{ color: active ? 'var(--sidebar-text-active)' : 'var(--sidebar-text)' }}>{label}</span>}
             </Link>
           );
         })}
       </nav>
 
       {!collapsed && (
-        <div className="border-t border-zinc-200/50 p-4 dark:border-zinc-800/50">
-          <p className="text-xs text-zinc-400">TapMenu Admin v2.0</p>
+        <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid var(--sidebar-border)' }}>
+          <p className="text-[10px]" style={{ color: 'var(--sidebar-text)', opacity: 0.35 }}>🍽️ TapMenu v7.0</p>
         </div>
       )}
     </aside>

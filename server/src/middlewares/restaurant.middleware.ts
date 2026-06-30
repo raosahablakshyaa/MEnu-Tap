@@ -46,10 +46,7 @@ export async function attachRestaurant(
   _res: Response,
   next: NextFunction
 ): Promise<void> {
-  if (!req.user?.restaurantId && !req.user?.isSuperAdmin) {
-    return next(new ForbiddenError('Restaurant context required'));
-  }
-  if (req.user.restaurantId) {
+  if (req.user?.restaurantId) {
     req.restaurantId = req.user.restaurantId;
   }
   next();

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -61,7 +61,6 @@ export default function QrPage() {
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [expiryModal, setExpiryModal] = useState<QrCodeType | null>(null);
   const [expiryDate, setExpiryDate] = useState('');
-  const printRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -210,24 +209,26 @@ export default function QrPage() {
   return (
     <div className="space-y-6">
       {/* Header toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="flex-1 text-sm text-zinc-500">
+      <div className="grid gap-3 xl:flex xl:items-center">
+        <p className="text-sm text-zinc-500 xl:flex-1">
           {qrCodes.length} QR codes · {tablesWithoutQr.length} tables without QR ·{' '}
           {qrCodes.filter(q => q.isActive).length} active
         </p>
-        <Button variant="outline" onClick={() => { setShowAnalytics(true); loadAnalytics(); }} className="gap-2">
-          <BarChart2 size={16} /> Analytics
-        </Button>
-        <Button variant="outline" onClick={printAll} className="gap-2">
-          <Printer size={16} /> Print All
-        </Button>
-        <Button variant="outline" onClick={downloadAllZip} className="gap-2">
-          <Download size={16} /> Export All
-        </Button>
-        <Button onClick={handleGenerateAll} disabled={generatingAll} className="gap-2 bg-orange-600 hover:bg-orange-700">
-          {generatingAll ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
-          Generate All
-        </Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button variant="outline" onClick={() => { setShowAnalytics(true); loadAnalytics(); }} className="gap-2">
+            <BarChart2 size={16} /> Analytics
+          </Button>
+          <Button variant="outline" onClick={printAll} className="gap-2">
+            <Printer size={16} /> Print All
+          </Button>
+          <Button variant="outline" onClick={downloadAllZip} className="gap-2">
+            <Download size={16} /> Export All
+          </Button>
+          <Button onClick={handleGenerateAll} disabled={generatingAll} className="gap-2 bg-orange-600 hover:bg-orange-700">
+            {generatingAll ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} />}
+            Generate All
+          </Button>
+        </div>
       </div>
 
       {/* Tables without QR */}
@@ -256,7 +257,7 @@ export default function QrPage() {
       ) : qrCodes.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 py-16 dark:border-zinc-700">
           <QrCode size={40} className="text-zinc-300" />
-          <p className="mt-3 text-sm text-zinc-500">No QR codes yet. Click "Generate All" to get started.</p>
+          <p className="mt-3 text-sm text-zinc-500">No QR codes yet. Click &quot;Generate All&quot; to get started.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -269,7 +270,7 @@ export default function QrPage() {
                 <div className="relative flex cursor-pointer items-center justify-center rounded-xl bg-zinc-50 p-3 dark:bg-zinc-800"
                   onClick={() => setPreview(qr)}>
                   {qr.svgData
-                    ? <div className={`h-32 w-32 transition-opacity ${!qr.isActive ? 'opacity-40 grayscale' : ''}`}
+                    ? <div className={`h-32 w-32 overflow-hidden transition-opacity [&_svg]:h-full [&_svg]:w-full ${!qr.isActive ? 'opacity-40 grayscale' : ''}`}
                         dangerouslySetInnerHTML={{ __html: qr.svgData }} />
                     : <QrCode size={80} className="text-zinc-300" />
                   }
@@ -354,7 +355,7 @@ export default function QrPage() {
               </div>
               {preview.svgData && (
                 <div className="flex justify-center rounded-xl bg-white p-4">
-                  <div className="h-48 w-48" dangerouslySetInnerHTML={{ __html: preview.svgData }} />
+                  <div className="h-48 w-48 overflow-hidden [&_svg]:h-full [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: preview.svgData }} />
                 </div>
               )}
               <p className="mt-3 text-center text-xs text-zinc-400 break-all">{preview.url}</p>

@@ -76,6 +76,50 @@ async function seed() {
       logger.info('Super admin already exists');
     }
 
+    // Seed demo customer account
+    const customerRole = await roleRepository.findSystemRoleBySlug(ROLE_SLUGS.CUSTOMER);
+    if (customerRole) {
+      const customerEmail = 'customer@tapmenu.com';
+      const existingCustomer = await userRepository.findByEmail(customerEmail);
+      if (!existingCustomer) {
+        const hashedCustomerPassword = await hashPassword('Customer@123456');
+        await userRepository.create({
+          email: customerEmail,
+          password: hashedCustomerPassword,
+          firstName: 'Demo',
+          lastName: 'Customer',
+          roleId: customerRole._id as mongoose.Types.ObjectId,
+          isEmailVerified: true,
+          isActive: true,
+        });
+        logger.info(`Demo customer created: ${customerEmail}`);
+      } else {
+        logger.info('Demo customer already exists');
+      }
+    }
+
+    // Seed demo restaurant owner account
+    const ownerRole = await roleRepository.findSystemRoleBySlug(ROLE_SLUGS.RESTAURANT_OWNER);
+    if (ownerRole) {
+      const ownerEmail = 'owner@tapmenu.com';
+      const existingOwner = await userRepository.findByEmail(ownerEmail);
+      if (!existingOwner) {
+        const hashedOwnerPassword = await hashPassword('Owner@123456');
+        await userRepository.create({
+          email: ownerEmail,
+          password: hashedOwnerPassword,
+          firstName: 'Demo',
+          lastName: 'Owner',
+          roleId: ownerRole._id as mongoose.Types.ObjectId,
+          isEmailVerified: true,
+          isActive: true,
+        });
+        logger.info(`Demo owner created: ${ownerEmail}`);
+      } else {
+        logger.info('Demo owner already exists');
+      }
+    }
+
     await seedPlans();
     await seedSettings();
 

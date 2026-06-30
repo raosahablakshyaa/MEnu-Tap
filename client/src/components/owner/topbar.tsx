@@ -3,44 +3,84 @@
 import { useAuth } from '@/lib/auth/auth-context';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
-import { Sun, Moon, LogOut, Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Sun, Moon, LogOut, Bell, Search } from 'lucide-react';
 
-interface TopbarProps {
-  title?: string;
-}
+interface TopbarProps { title?: string; }
 
 export default function OwnerTopbar({ title }: TopbarProps) {
   const { user, logout } = useAuth();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
 
-  const handleLogout = async () => {
-    await logout();
-    router.push('/login');
-  };
+  const handleLogout = async () => { await logout(); router.push('/login'); };
+
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
 
   return (
-    <header className="flex h-14 items-center justify-between border-b border-zinc-200/60 bg-white/80 px-6 backdrop-blur-xl dark:border-zinc-800/60 dark:bg-zinc-900/80">
-      <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">{title}</h1>
-      <div className="flex items-center gap-2">
-        <button className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800" aria-label="Notifications">
-          <Bell size={18} />
+    <header
+      className="flex h-[56px] items-center justify-between px-6 flex-shrink-0"
+      style={{ background: 'var(--topbar-bg)', borderBottom: '1px solid var(--topbar-border)' }}
+    >
+      <h1 className="text-[15px] font-semibold" style={{ color: 'var(--foreground)', fontFamily: 'Playfair Display, Georgia, serif' }}>
+        {title}
+      </h1>
+
+      <div className="flex items-center gap-1">
+        {/* Search */}
+        <button
+          className="hidden sm:flex items-center gap-2 rounded-lg px-3 py-1.5 mr-2 transition-colors"
+          style={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--foreground-muted)' }}
+        >
+          <Search size={13} />
+          <span className="text-xs">Search...</span>
+          <kbd className="ml-2 hidden xl:inline-flex h-5 items-center rounded px-1.5 text-[10px] font-medium"
+            style={{ background: 'var(--border)', color: 'var(--foreground-muted)' }}>⌘K</kbd>
         </button>
+
+        {/* Theme */}
         <button
           onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          className="rounded-lg p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          aria-label="Toggle theme"
+          className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+          style={{ color: 'var(--foreground-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-raised)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
-          {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
         </button>
-        <span className="hidden text-sm text-zinc-500 dark:text-zinc-400 sm:block">
-          {user?.fullName}
-        </span>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5 text-zinc-500">
-          <LogOut size={16} />
-          <span className="hidden sm:inline">Logout</span>
-        </Button>
+
+        {/* Bell */}
+        <button
+          className="relative flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+          style={{ color: 'var(--foreground-muted)' }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-raised)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+        >
+          <Bell size={15} />
+          <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full" style={{ background: 'var(--primary)' }} />
+        </button>
+
+        <div className="mx-2 h-5 w-px" style={{ background: 'var(--border)' }} />
+
+        {/* User */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors"
+          onMouseEnter={e => (e.currentTarget.style.background = 'var(--surface-raised)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+          title="Click to logout"
+        >
+          <div
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-white food-gradient"
+          >
+            {initials}
+          </div>
+          <span className="hidden sm:block text-xs font-medium" style={{ color: 'var(--foreground)' }}>
+            {user?.fullName?.split(' ')[0] ?? 'Account'}
+          </span>
+          <LogOut size={12} style={{ color: 'var(--foreground-muted)' }} />
+        </button>
       </div>
     </header>
   );

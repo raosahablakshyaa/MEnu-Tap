@@ -1,4 +1,5 @@
 import { Order } from '../models/order.model';
+import { Types } from 'mongoose';
 
 export class AnalyticsService {
   async getRevenueSummary(restaurantId: string, period: 'today' | 'week' | 'month' | 'year' = 'month') {
@@ -39,10 +40,11 @@ export class AnalyticsService {
 
   async getDailyRevenue(restaurantId: string, days = 30) {
     const startDate = new Date(Date.now() - days * 86400000);
+    const restaurantObjectId = new Types.ObjectId(restaurantId);
     const data = await Order.aggregate([
       {
         $match: {
-          restaurantId: { $toString: restaurantId },
+          restaurantId: restaurantObjectId,
           createdAt: { $gte: startDate },
           status: { $in: ['completed', 'served'] },
           isDeleted: false,
@@ -62,10 +64,11 @@ export class AnalyticsService {
 
   async getPeakHours(restaurantId: string) {
     const startDate = new Date(Date.now() - 30 * 86400000);
+    const restaurantObjectId = new Types.ObjectId(restaurantId);
     const data = await Order.aggregate([
       {
         $match: {
-          restaurantId: { $toString: restaurantId },
+          restaurantId: restaurantObjectId,
           createdAt: { $gte: startDate },
           isDeleted: false,
         },
@@ -83,16 +86,18 @@ export class AnalyticsService {
   }
 
   async getOrderStatusDistribution(restaurantId: string) {
+    const restaurantObjectId = new Types.ObjectId(restaurantId);
     const data = await Order.aggregate([
-      { $match: { restaurantId: { $toString: restaurantId }, isDeleted: false } },
+      { $match: { restaurantId: restaurantObjectId, isDeleted: false } },
       { $group: { _id: '$status', count: { $sum: 1 } } },
     ]);
     return data;
   }
 
   async getTopSellingItems(restaurantId: string, limit = 10) {
+    const restaurantObjectId = new Types.ObjectId(restaurantId);
     const data = await Order.aggregate([
-      { $match: { restaurantId: { $toString: restaurantId }, status: { $in: ['completed', 'served'] }, isDeleted: false } },
+      { $match: { restaurantId: restaurantObjectId, status: { $in: ['completed', 'served'] }, isDeleted: false } },
       { $unwind: '$items' },
       { $group: { _id: '$items.name', totalQty: { $sum: '$items.quantity' }, totalRevenue: { $sum: '$items.total' } } },
       { $sort: { totalQty: -1 } },
@@ -103,10 +108,11 @@ export class AnalyticsService {
 
   async getMonthlyRevenue(restaurantId: string, months = 12) {
     const startDate = new Date(Date.now() - months * 30 * 86400000);
+    const restaurantObjectId = new Types.ObjectId(restaurantId);
     const data = await Order.aggregate([
       {
         $match: {
-          restaurantId: { $toString: restaurantId },
+          restaurantId: restaurantObjectId,
           createdAt: { $gte: startDate },
           status: { $in: ['completed', 'served'] },
           isDeleted: false,

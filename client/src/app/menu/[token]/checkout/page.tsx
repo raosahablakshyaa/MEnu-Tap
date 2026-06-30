@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import {
-  ArrowLeft, User, Phone, Mail, CreditCard, Banknote,
+  ArrowLeft, User, Phone, Mail, CreditCard,
   Smartphone, Loader2, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { useCustomer } from '@/lib/customer/customer-context';
@@ -17,9 +16,8 @@ type PaymentMethod = 'cash' | 'razorpay' | 'upi';
 // Razorpay type is declared in src/hooks/use-razorpay.ts; no re-declaration needed here
 
 const PAYMENT_METHODS: { id: PaymentMethod; label: string; icon: React.ReactNode; desc: string }[] = [
-  { id: 'cash', label: 'Pay at Counter', icon: <Banknote size={18} />, desc: 'Pay cash when bill arrives' },
-  { id: 'upi', label: 'UPI / QR', icon: <Smartphone size={18} />, desc: 'Pay via any UPI app' },
-  { id: 'razorpay', label: 'Card / Wallet', icon: <CreditCard size={18} />, desc: 'Card, netbanking, wallets' },
+  { id: 'upi', label: 'UPI Payment', icon: <Smartphone size={18} />, desc: 'Pay with any UPI app, then place order' },
+  { id: 'razorpay', label: 'Online Payment', icon: <CreditCard size={18} />, desc: 'Card, UPI, netbanking, wallets' },
 ];
 
 function loadRazorpayScript(): Promise<boolean> {
@@ -41,9 +39,9 @@ export default function CheckoutPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
-  const [consentGiven, setConsentGiven] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(true);
   const [notes, setNotes] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('upi');
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,13 +74,29 @@ export default function CheckoutPage() {
   const placeOrder = async () => {
     if (!sessionId) return;
     setError(null);
+
+    const cleanName = name.trim();
+    const cleanPhone = phone.trim();
+
+    if (!cleanName) {
+      setError('Please enter your name');
+      return;
+    }
+    if (!/^[0-9+\-\s()]{7,20}$/.test(cleanPhone)) {
+      setError('Please enter a valid mobile number');
+      return;
+    }
+
     setPlacing(true);
 
     try {
       // Save customer details first
-      if (name || phone || email) {
-        await orderApi.saveDetails(sessionId, { name, phone, email, consentGiven });
-      }
+      await orderApi.saveDetails(sessionId, {
+        name: cleanName,
+        phone: cleanPhone,
+        email: email.trim() || undefined,
+        consentGiven,
+      });
 
       // Place the order
       const orderRes = await orderApi.place({
@@ -125,14 +139,14 @@ export default function CheckoutPage() {
               } catch (e) { reject(e); }
             },
             modal: { ondismiss: () => reject(new Error('Payment cancelled')) },
-            prefill: { name, contact: phone, email },
+            prefill: { name: cleanName, contact: cleanPhone, email },
             theme: { color: themeColor },
           });
           rzp.open();
         });
       }
 
-      router.push(`/menu/${token}/order/${order._id}`);
+      router.push(`/menu/${token}/order/${order._id}?sid=${encodeURIComponent(sessionId)}`);
     } catch (e: unknown) {
       setError((e as Error).message || 'Failed to place order');
     } finally {
@@ -153,18 +167,19 @@ export default function CheckoutPage() {
       <div className="space-y-3 p-4">
         {/* Customer details */}
         <div className="rounded-2xl bg-white p-4 shadow-sm">
-          <h2 className="mb-3 text-sm font-bold text-zinc-800">Your Details (optional)</h2>
+          <h2 className="mb-1 text-sm font-bold text-zinc-800">Your Details</h2>
+          <p className="mb-3 text-xs text-zinc-400">Required so the restaurant can identify your order.</p>
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5">
               <User size={16} className="text-zinc-400 shrink-0" />
               <input value={name} onChange={e => setName(e.target.value)}
-                placeholder="Your name"
+                placeholder="Your name *"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400" />
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5">
               <Phone size={16} className="text-zinc-400 shrink-0" />
               <input value={phone} onChange={e => setPhone(e.target.value)}
-                placeholder="Phone number" type="tel"
+                placeholder="Mobile number *" type="tel" inputMode="tel"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400" />
             </div>
             <div className="flex items-center gap-3 rounded-xl border border-zinc-200 px-3 py-2.5">
@@ -173,13 +188,11 @@ export default function CheckoutPage() {
                 placeholder="Email (optional)" type="email"
                 className="flex-1 bg-transparent text-sm outline-none placeholder:text-zinc-400" />
             </div>
-            {(name || phone || email) && (
-              <label className="flex items-start gap-2 text-xs text-zinc-500">
-                <input type="checkbox" checked={consentGiven} onChange={e => setConsentGiven(e.target.checked)}
-                  className="mt-0.5 accent-orange-500" />
-                I consent to my details being saved for faster future orders
-              </label>
-            )}
+            <label className="flex items-start gap-2 text-xs text-zinc-500">
+              <input type="checkbox" checked={consentGiven} onChange={e => setConsentGiven(e.target.checked)}
+                className="mt-0.5 accent-orange-500" />
+              I consent to share my details with the restaurant for this order
+            </label>
           </div>
         </div>
 
@@ -259,7 +272,7 @@ export default function CheckoutPage() {
         >
           {placing
             ? <><Loader2 size={16} className="animate-spin" /> Placing order…</>
-            : <>Place Order · ₹{total.toFixed(2)}</>
+            : <>Pay & Place Order · ₹{total.toFixed(2)}</>
           }
         </button>
       </div>

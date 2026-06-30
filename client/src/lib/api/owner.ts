@@ -17,7 +17,7 @@ export const categoriesApi = {
     const formData = new FormData();
     formData.append('file', file);
     const token = apiClient.getAccessToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/owner/categories/upload`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1'}/owner/categories/upload`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',
@@ -44,7 +44,7 @@ export const menuApi = {
     const formData = new FormData();
     formData.append('file', file);
     const token = apiClient.getAccessToken();
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1'}/owner/menu/upload`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001/api/v1'}/owner/menu/upload`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include',

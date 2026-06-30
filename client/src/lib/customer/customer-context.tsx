@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import type { QrValidationData, Cart, Order } from '@/types/customer';
-import { menuApi, cartApi, orderApi } from '@/lib/api/customer';
+import { menuApi, cartApi } from '@/lib/api/customer';
 
 interface CustomerContextType {
   // QR / session state
@@ -29,7 +29,7 @@ interface CustomerContextType {
   setCurrentOrder: (order: Order | null) => void;
 
   // Init from QR token
-  initSession: (token: string) => Promise<void>;
+  initSession: (token: string, opts?: { forceNew?: boolean }) => Promise<void>;
 }
 
 const CustomerContext = createContext<CustomerContextType | undefined>(undefined);
@@ -75,9 +75,22 @@ export function CustomerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [sessionId]);
 
-  const initSession = useCallback(async (qrToken: string) => {
+  const initSession = useCallback(async (qrToken: string, opts?: { forceNew?: boolean }) => {
     setIsSessionLoading(true);
     try {
+      if (!opts?.forceNew && typeof window !== 'undefined') {
+        const storedToken = localStorage.getItem('tm_token');
+        const storedSession = localStorage.getItem('tm_session');
+        const storedQr = localStorage.getItem('tm_qr');
+
+        if (storedToken === qrToken && storedSession && storedQr) {
+          setToken(storedToken);
+          setSessionId(storedSession);
+          try { setQrData(JSON.parse(storedQr)); } catch { /* ignore invalid cache */ }
+          return;
+        }
+      }
+
       // Validate QR
       const qrRes = await menuApi.validateToken(qrToken);
       const data = qrRes.data!;

@@ -4,7 +4,7 @@ import withPWAInit from '@ducanh2912/next-pwa';
 
 const withPWA = withPWAInit({
   dest: 'public',
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.NODE_ENV === 'development' || process.env.NEXT_ENABLE_PWA !== 'true',
   register: true,
   workboxOptions: {
     disableDevLogs: true,

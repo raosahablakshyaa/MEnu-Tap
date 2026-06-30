@@ -5,7 +5,6 @@ import { useRouter, useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Loader2, MapPin, Clock, Phone, ChefHat, AlertCircle } from 'lucide-react';
 import { useCustomer } from '@/lib/customer/customer-context';
-import type { QrValidationData } from '@/types/customer';
 
 export default function QrLandingPage() {
   const { token } = useParams() as { token: string };
@@ -16,10 +15,9 @@ export default function QrLandingPage() {
 
   useEffect(() => {
     if (!token) return;
-    initSession(token)
+    initSession(token, { forceNew: true })
       .then(() => {
-        // Small delay so user sees the landing screen before navigating
-        setTimeout(() => router.push(`/menu/${token}/browse`), 1800);
+        router.replace(`/menu/${token}/browse`);
       })
       .catch((e: Error) => setError(e.message));
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps

@@ -29,6 +29,9 @@ export class OrderService {
   async placeOrder(input: PlaceOrderInput): Promise<IOrder> {
     const session = await CustomerSession.findOne({ sessionId: input.sessionId, isActive: true });
     if (!session) throw new NotFoundError('Session not found or expired');
+    if (!session.name?.trim() || !session.phone?.trim()) {
+      throw new BadRequestError('Customer name and mobile number are required before placing an order');
+    }
 
     const cart = await Cart.findOne({ sessionId: input.sessionId });
     if (!cart || cart.items.length === 0) throw new BadRequestError('Cart is empty');

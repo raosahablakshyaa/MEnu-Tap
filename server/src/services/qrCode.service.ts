@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import QRCode from 'qrcode';
+import { Types } from 'mongoose';
 import { QrCode } from '../models/qrCode.model';
 import { Table } from '../models/table.model';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { logger } from '../utils/logger';
 
-const APP_BASE_URL = process.env.APP_BASE_URL || 'https://menu.tapmenu.app';
+const APP_BASE_URL = process.env.APP_BASE_URL || process.env.CLIENT_URL || 'http://localhost:3000';
 
 function generateToken(): string {
   return crypto.randomBytes(24).toString('base64url');
@@ -17,33 +18,62 @@ async function generateQrSvg(url: string): Promise<string> {
 
 export class QrCodeService {
   async list(restaurantId: string) {
-    return QrCode.find({ restaurantId })
+    const qrCodes = await QrCode.find({ restaurantId })
       .populate('tableId', 'tableNumber displayName floor floorName status')
       .sort({ createdAt: -1 })
       .lean();
+
+    const currentByTable = new Map<string, (typeof qrCodes)[number]>();
+
+    for (const qr of qrCodes) {
+      const tableId = qr.tableId?._id?.toString() ?? qr.tableId?.toString();
+      if (!tableId) continue;
+
+      const existing = currentByTable.get(tableId);
+      if (!existing || (qr.isActive && !existing.isActive)) {
+        currentByTable.set(tableId, qr);
+      }
+    }
+
+    return Array.from(currentByTable.values());
   }
 
   async generateForTable(restaurantId: string, tableId: string, userId: string) {
     const table = await Table.findOne({ _id: tableId, restaurantId });
     if (!table) throw new NotFoundError('Table not found');
 
-    // Deactivate existing QR codes for this table
-    await QrCode.updateMany({ restaurantId, tableId }, { isActive: false });
-
     const token = generateToken();
     const url = `${APP_BASE_URL}/menu/${token}`;
     const svgData = await generateQrSvg(url);
 
-    const qr = await QrCode.create({
-      restaurantId,
-      tableId,
-      tableNumber: table.tableNumber,
-      token,
-      url,
-      svgData,
-      isActive: true,
-      createdBy: userId,
-    });
+    const existingQr = await QrCode.findOne({ restaurantId, tableId }).sort({ createdAt: -1 });
+    let qr;
+
+    if (existingQr) {
+      existingQr.tableNumber = table.tableNumber;
+      existingQr.token = token;
+      existingQr.url = url;
+      existingQr.svgData = svgData;
+      existingQr.isActive = true;
+      existingQr.updatedBy = new Types.ObjectId(userId);
+      qr = await existingQr.save();
+
+      await QrCode.updateMany(
+        { restaurantId, tableId, _id: { $ne: existingQr._id } },
+        { isActive: false }
+      );
+    } else {
+      qr = await QrCode.create({
+        restaurantId,
+        tableId,
+        tableNumber: table.tableNumber,
+        token,
+        url,
+        svgData,
+        isActive: true,
+        createdBy: userId,
+      });
+    }
 
     // Update table with latest qrCodeId
     table.qrCodeId = qr._id as typeof table.qrCodeId;
@@ -71,7 +101,31 @@ export class QrCodeService {
   async regenerate(restaurantId: string, qrId: string, userId: string) {
     const qr = await QrCode.findOne({ _id: qrId, restaurantId });
     if (!qr) throw new NotFoundError('QR code not found');
-    return this.generateForTable(restaurantId, qr.tableId.toString(), userId);
+
+    const table = await Table.findOne({ _id: qr.tableId, restaurantId });
+    if (!table) throw new NotFoundError('Table not found');
+
+    const token = generateToken();
+    const url = `${APP_BASE_URL}/menu/${token}`;
+    const svgData = await generateQrSvg(url);
+
+    qr.tableNumber = table.tableNumber;
+    qr.token = token;
+    qr.url = url;
+    qr.svgData = svgData;
+    qr.isActive = true;
+    qr.updatedBy = new Types.ObjectId(userId);
+    await qr.save();
+
+    await QrCode.updateMany(
+      { restaurantId, tableId: qr.tableId, _id: { $ne: qr._id } },
+      { isActive: false }
+    );
+
+    table.qrCodeId = qr._id as typeof table.qrCodeId;
+    await table.save();
+
+    return qr;
   }
 
   async deactivate(restaurantId: string, qrId: string) {
@@ -85,6 +139,10 @@ export class QrCodeService {
   async activate(restaurantId: string, qrId: string) {
     const qr = await QrCode.findOne({ _id: qrId, restaurantId });
     if (!qr) throw new NotFoundError('QR code not found');
+    await QrCode.updateMany(
+      { restaurantId, tableId: qr.tableId, _id: { $ne: qr._id } },
+      { isActive: false }
+    );
     qr.isActive = true;
     await qr.save();
     return { activated: true };

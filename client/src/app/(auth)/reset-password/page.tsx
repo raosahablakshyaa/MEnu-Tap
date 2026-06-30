@@ -1,28 +1,19 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { authApi } from '@/lib/api/auth';
 import { ApiError } from '@/lib/api/client';
+import { UtensilsCrossed, ArrowLeft } from 'lucide-react';
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
-
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -34,7 +25,6 @@ function ResetPasswordForm() {
     setError('');
     setFieldErrors({});
     setIsLoading(true);
-
     try {
       await authApi.resetPassword({ token, password, confirmPassword });
       router.push('/login?reset=success');
@@ -43,95 +33,74 @@ function ResetPasswordForm() {
         setError(err.message);
         if (err.fieldErrors) {
           const mapped: Record<string, string> = {};
-          Object.entries(err.fieldErrors).forEach(([key, messages]) => {
-            mapped[key] = messages[0];
-          });
+          Object.entries(err.fieldErrors).forEach(([key, messages]) => { mapped[key] = messages[0]; });
           setFieldErrors(mapped);
         }
-      } else {
-        setError('An unexpected error occurred');
-      }
-    } finally {
-      setIsLoading(false);
-    }
+      } else { setError('An unexpected error occurred'); }
+    } finally { setIsLoading(false); }
   };
 
   if (!token) {
     return (
-      <CardContent>
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-600">
-          Invalid reset link. Please request a new password reset.
+      <div className="space-y-4 text-center">
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+          Invalid or expired reset link. Please request a new one.
         </div>
-        <Link href="/forgot-password" className="mt-4 block text-center text-sm text-orange-600 hover:underline">
+        <Link href="/forgot-password" className="text-sm font-medium hover:underline" style={{ color: 'var(--primary)' }}>
           Request new link
         </Link>
-      </CardContent>
+      </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-      <CardContent className="space-y-4">
-        {error && (
-          <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">{error}</div>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="password">New Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            error={fieldErrors.password}
-            required
-          />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="rounded-lg px-4 py-3 text-sm" style={{ background: '#fee2e2', color: '#991b1b', border: '1px solid #fecaca' }}>
+          {error}
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirmPassword">Confirm Password</Label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            error={fieldErrors.confirmPassword}
-            required
-          />
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading ? 'Resetting...' : 'Reset password'}
-        </Button>
-      </CardFooter>
+      )}
+      <div className="space-y-1.5">
+        <Label>New Password</Label>
+        <Input type="password" value={password} onChange={e => setPassword(e.target.value)} error={fieldErrors.password} required />
+      </div>
+      <div className="space-y-1.5">
+        <Label>Confirm Password</Label>
+        <Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} error={fieldErrors.confirmPassword} required />
+      </div>
+      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+        {isLoading ? 'Resetting...' : 'Set new password'}
+      </Button>
     </form>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-md"
-      >
-        <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="text-3xl font-bold text-orange-600">TapMenu</span>
-          </Link>
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: 'var(--background)' }}>
+      <div className="w-full max-w-md">
+        <div className="mb-8 flex items-center justify-center gap-2">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: 'var(--primary)' }}>
+            <UtensilsCrossed size={17} className="text-white" />
+          </div>
+          <span className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>TapMenu</span>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Set new password</CardTitle>
-            <CardDescription>Enter your new password below</CardDescription>
-          </CardHeader>
-          <Suspense fallback={<CardContent>Loading...</CardContent>}>
+        <div className="rounded-xl p-8" style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: 'var(--card-shadow)' }}>
+          <div className="mb-6">
+            <h2 className="text-xl font-bold" style={{ color: 'var(--foreground)' }}>Set new password</h2>
+            <p className="mt-1 text-sm" style={{ color: 'var(--foreground-muted)' }}>Enter your new password below</p>
+          </div>
+          <Suspense fallback={<div className="h-32 skeleton" />}>
             <ResetPasswordForm />
           </Suspense>
-        </Card>
-      </motion.div>
+          <div className="mt-5 text-center">
+            <Link href="/login" className="inline-flex items-center gap-1.5 text-sm font-medium hover:underline" style={{ color: 'var(--foreground-muted)' }}>
+              <ArrowLeft size={14} /> Back to sign in
+            </Link>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

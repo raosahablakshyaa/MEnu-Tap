@@ -14,7 +14,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <div className="text-center">
           <p className="text-7xl font-extrabold text-red-500">500</p>
           <h1 className="mt-4 text-2xl font-bold text-zinc-900">Something went wrong</h1>
-          <p className="mt-2 text-zinc-500">An unexpected error occurred. We've been notified.</p>
+          <p className="mt-2 text-zinc-500">An unexpected error occurred. We&apos;ve been notified.</p>
           {error.digest && (
             <p className="mt-1 font-mono text-xs text-zinc-400">Error ID: {error.digest}</p>
           )}
