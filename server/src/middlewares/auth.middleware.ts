@@ -14,6 +14,25 @@ function extractPermissions(role: IRole | null): string[] {
   return (role.permissions as unknown as IPermission[]).map((p) => p.slug);
 }
 
+function normalizeObjectId(value: unknown): Types.ObjectId | undefined {
+  if (!value) return undefined;
+  if (value instanceof Types.ObjectId) return value;
+
+  if (typeof value === 'string' && Types.ObjectId.isValid(value)) {
+    return new Types.ObjectId(value);
+  }
+
+  if (typeof value === 'object' && '_id' in value) {
+    const id = (value as { _id?: unknown })._id;
+    if (id instanceof Types.ObjectId) return id;
+    if (typeof id === 'string' && Types.ObjectId.isValid(id)) {
+      return new Types.ObjectId(id);
+    }
+  }
+
+  return undefined;
+}
+
 export async function authenticate(
   req: AuthenticatedRequest,
   _res: Response,
@@ -50,6 +69,7 @@ export async function authenticate(
     const role = user.roleId as unknown as IRole;
     const roleSlug = role?.slug || decoded.roleSlug;
     const permissions = extractPermissions(role);
+    const restaurantId = normalizeObjectId(user.restaurantId);
 
     req.user = {
       _id: user._id as Types.ObjectId,
@@ -58,14 +78,14 @@ export async function authenticate(
       lastName: user.lastName,
       roleId: user.roleId as Types.ObjectId,
       roleSlug,
-      restaurantId: user.restaurantId as Types.ObjectId | undefined,
+      restaurantId,
       permissions,
       isSuperAdmin: roleSlug === ROLE_SLUGS.SUPER_ADMIN,
     };
     req.tokenId = decoded.tokenId;
 
-    if (user.restaurantId) {
-      req.restaurantId = user.restaurantId as Types.ObjectId;
+    if (restaurantId) {
+      req.restaurantId = restaurantId;
     }
 
     next();

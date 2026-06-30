@@ -5,13 +5,15 @@ import {
   TrendingUp, ShoppingBag, Clock, CheckCircle2, XCircle,
   Table2, Users, QrCode, UtensilsCrossed, FolderOpen,
   CreditCard, BarChart3, ArrowUpRight, ArrowDownRight, AlertCircle,
+  ReceiptText,
 } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend,
 } from 'recharts';
-import { dashboardApi, analyticsApi } from '@/lib/api/owner';
+import { dashboardApi, analyticsApi, ownerOrdersApi } from '@/lib/api/owner';
 import { DashboardStats } from '@/types/owner';
+import type { Order, OrderStatus } from '@/types/customer';
 
 function fmt(n: number) {
   return new Intl.NumberFormat('en-IN', {
@@ -35,6 +37,37 @@ function shouldShowRenewalAlert(subscription: DashboardStats['subscription']) {
 
   const daysUntilExpiry = getDaysUntilExpiry(subscription.expiresAt);
   return daysUntilExpiry !== null && daysUntilExpiry <= 7;
+}
+
+function formatOrderTime(date: string) {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return '-';
+
+  return parsed.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function orderItemsSummary(items: Order['items']) {
+  if (!items?.length) return 'No items';
+
+  const visible = items.slice(0, 2).map((item) => `${item.quantity}x ${item.name}`);
+  const extra = items.length > 2 ? ` +${items.length - 2} more` : '';
+  return `${visible.join(', ')}${extra}`;
+}
+
+function statusClass(status: OrderStatus) {
+  if (status === 'completed' || status === 'served') return 'badge-success';
+  if (status === 'cancelled') return 'badge-danger';
+  if (status === 'ready') return 'badge-info';
+  return 'badge-warning';
+}
+
+function paymentClass(status: Order['paymentStatus']) {
+  return status === 'paid' ? 'badge-success' : status === 'failed' ? 'badge-danger' : 'badge-warning';
 }
 
 interface StatCardProps {
@@ -87,6 +120,14 @@ function SectionHeader({ title, sub }: { title: string; sub?: string }) {
 
 const PIE_COLORS = ['#0f766e', '#14b8a6', '#2dd4bf', '#5eead4', '#99f6e4'];
 
+const NEXT_STATUS_OPTIONS: Partial<Record<OrderStatus, OrderStatus[]>> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['preparing', 'cancelled'],
+  preparing: ['ready'],
+  ready: ['served'],
+  served: ['completed'],
+};
+
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { value: number }[]; label?: string }) => {
   if (active && payload && payload.length) {
     return (
@@ -111,22 +152,61 @@ export default function OwnerDashboardPage() {
   const [daily, setDaily] = useState<{ _id: string; revenue: number; orders: number }[]>([]);
   const [topItems, setTopItems] = useState<{ _id: string; totalQty: number; totalRevenue: number }[]>([]);
   const [statusDist, setStatusDist] = useState<{ _id: string; count: number }[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
+  const [ordersError, setOrdersError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([
-      dashboardApi.getStats(),
-      analyticsApi.daily(14),
-      analyticsApi.topItems(5),
-      analyticsApi.full(),
-    ]).then(([s, d, t, a]) => {
-      if (s.data) setStats(s.data as unknown as DashboardStats);
-      if (d.data) setDaily(d.data as typeof daily);
-      if (t.data) setTopItems(t.data as typeof topItems);
-      const full = a.data as Record<string, unknown>;
-      if (full?.statusDist) setStatusDist(full.statusDist as typeof statusDist);
-    }).finally(() => setLoading(false));
+    async function loadDashboard() {
+      const [statsRes, dailyRes, topItemsRes, analyticsRes, ordersRes] = await Promise.allSettled([
+        dashboardApi.getStats(),
+        analyticsApi.daily(14),
+        analyticsApi.topItems(5),
+        analyticsApi.full(),
+        ownerOrdersApi.recent(8),
+      ]);
+
+      if (statsRes.status === 'fulfilled' && statsRes.value.data) setStats(statsRes.value.data as unknown as DashboardStats);
+      if (dailyRes.status === 'fulfilled' && dailyRes.value.data) setDaily(dailyRes.value.data as typeof daily);
+      if (topItemsRes.status === 'fulfilled' && topItemsRes.value.data) setTopItems(topItemsRes.value.data as typeof topItems);
+      if (analyticsRes.status === 'fulfilled') {
+        const full = analyticsRes.value.data as Record<string, unknown>;
+        if (full?.statusDist) setStatusDist(full.statusDist as typeof statusDist);
+      }
+      if (ordersRes.status === 'fulfilled') {
+        setRecentOrders(ordersRes.value.data?.orders ?? []);
+        setOrdersError(null);
+      } else {
+        setOrdersError('Order details could not load. Please refresh after the server restarts.');
+      }
+
+      setLoading(false);
+    }
+
+    loadDashboard();
   }, []);
+
+  const handleStatusChange = async (order: Order, nextStatus: OrderStatus) => {
+    setStatusUpdating(order._id);
+    setStatusError(null);
+    try {
+      const res = await ownerOrdersApi.updateStatus(
+        order._id,
+        nextStatus,
+        nextStatus === 'cancelled' ? 'Cancelled from owner dashboard' : undefined
+      );
+      const updated = res.data as Order | null;
+      if (updated) {
+        setRecentOrders((orders) => orders.map((item) => item._id === order._id ? updated : item));
+      }
+    } catch (error) {
+      setStatusError(error instanceof Error ? error.message : 'Could not update order status');
+    } finally {
+      setStatusUpdating(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -207,6 +287,115 @@ export default function OwnerDashboardPage() {
           <StatCard label="Staff Members"value={s?.staff.count ?? 0}     icon={Users}           iconBg="#6366f1" />
           <StatCard label="QR Codes"     value={s?.qrCodes.generated ?? 0}icon={QrCode}         iconBg="#f59e0b" />
         </div>
+      </div>
+
+      {/* Order Details */}
+      <div className="content-card p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <SectionHeader title="Order Details" sub="Latest customer orders from QR, menu and counter flows" />
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-lg"
+            style={{ background: '#dbeafe', color: '#1d4ed8' }}
+          >
+            <ReceiptText size={18} />
+          </div>
+        </div>
+        {statusError && (
+          <div className="mb-3 rounded-lg px-3 py-2 text-xs font-medium badge-danger">
+            {statusError}
+          </div>
+        )}
+
+        {recentOrders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1040px] border-separate border-spacing-0 text-left text-sm">
+              <thead>
+                <tr style={{ color: 'var(--foreground-muted)' }}>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Order</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Customer</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Items</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Payment</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Total</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Invoice</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Status</th>
+                  <th className="border-b px-3 py-2 text-xs font-semibold" style={{ borderColor: 'var(--border)' }}>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentOrders.map((order) => (
+                  <tr key={order._id} className="align-top">
+                    <td className="border-b px-3 py-3 font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                      #{order.orderNumber}
+                    </td>
+                    <td className="border-b px-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                      <p className="font-medium" style={{ color: 'var(--foreground)' }}>{order.customerName || 'Guest'}</p>
+                      <p className="text-xs" style={{ color: 'var(--foreground-muted)' }}>
+                        {order.tableNumber ? `Table ${order.tableNumber}` : 'No table'}
+                        {order.customerPhone ? ` · ${order.customerPhone}` : ''}
+                      </p>
+                    </td>
+                    <td className="max-w-[260px] border-b px-3 py-3 text-xs leading-5" style={{ borderColor: 'var(--border)', color: 'var(--foreground-muted)' }}>
+                      {orderItemsSummary(order.items)}
+                    </td>
+                    <td className="border-b px-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                      <span className={`badge ${paymentClass(order.paymentStatus)} capitalize`}>
+                        {order.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="border-b px-3 py-3 font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--foreground)' }}>
+                      {fmt(order.totalAmount)}
+                    </td>
+                    <td className="border-b px-3 py-3 text-xs font-semibold" style={{ borderColor: 'var(--border)', color: 'var(--foreground-muted)' }}>
+                      {order.gstInvoiceNumber || 'Generating'}
+                    </td>
+                    <td className="border-b px-3 py-3" style={{ borderColor: 'var(--border)' }}>
+                      <div className="flex flex-col gap-2">
+                        <span className={`badge ${statusClass(order.status)} w-fit capitalize`}>
+                          {order.status}
+                        </span>
+                        {(NEXT_STATUS_OPTIONS[order.status]?.length ?? 0) > 0 && (
+                          <select
+                            value=""
+                            disabled={statusUpdating === order._id}
+                            onChange={(event) => {
+                              const nextStatus = event.target.value as OrderStatus;
+                              if (nextStatus) handleStatusChange(order, nextStatus);
+                            }}
+                            className="h-8 rounded-md border px-2 text-xs outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                            style={{
+                              background: 'var(--surface)',
+                              borderColor: 'var(--border)',
+                              color: 'var(--foreground)',
+                            }}
+                          >
+                            <option value="">
+                              {statusUpdating === order._id ? 'Updating...' : 'Change status'}
+                            </option>
+                            {NEXT_STATUS_OPTIONS[order.status]?.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    </td>
+                    <td className="border-b px-3 py-3 text-xs" style={{ borderColor: 'var(--border)', color: 'var(--foreground-muted)' }}>
+                      {formatOrderTime(order.createdAt)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div
+            className="flex min-h-32 items-center justify-center rounded-lg border border-dashed text-sm"
+            style={{ borderColor: 'var(--border)', color: 'var(--foreground-muted)' }}
+          >
+            {ordersError ?? 'No orders placed yet'}
+          </div>
+        )}
       </div>
 
       {/* Charts Row */}

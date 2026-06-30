@@ -159,6 +159,8 @@ export interface Order {
   currency: string;
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentMethod?: PaymentMethod;
+  gstInvoiceId?: string;
+  gstInvoiceNumber?: string;
   estimatedPrepTime?: number;
   notes?: string;
   feedbackGiven: boolean;

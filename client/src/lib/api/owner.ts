@@ -1,8 +1,16 @@
 import { apiClient } from './client';
+import type { KitchenOrderHistoryResult } from './kitchen';
 
 // Dashboard
 export const dashboardApi = {
   getStats: () => apiClient.get<Record<string, unknown>>('/owner/dashboard'),
+};
+
+export const ownerOrdersApi = {
+  recent: (limit = 8) =>
+    apiClient.get<KitchenOrderHistoryResult>(`/kitchen/orders/history?page=1&limit=${limit}`),
+  updateStatus: (orderId: string, status: string, cancelReason?: string) =>
+    apiClient.put(`/kitchen/orders/${orderId}/status`, { status, cancelReason }),
 };
 
 // Categories

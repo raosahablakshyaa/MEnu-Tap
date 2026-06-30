@@ -60,6 +60,8 @@ export interface IOrder extends Document {
   razorpayPaymentId?: string;
   transactionId?: string;
   paidAt?: Date;
+  gstInvoiceId?: Types.ObjectId;
+  gstInvoiceNumber?: string;
 
   // Kitchen lifecycle timestamps
   acceptedAt?: Date;
@@ -153,6 +155,8 @@ const orderSchema = new Schema<IOrder>(
     razorpayPaymentId: { type: String },
     transactionId: { type: String },
     paidAt: { type: Date },
+    gstInvoiceId: { type: Schema.Types.ObjectId, ref: 'GstInvoice' },
+    gstInvoiceNumber: { type: String, trim: true },
 
     acceptedAt: { type: Date },
     preparingAt: { type: Date },

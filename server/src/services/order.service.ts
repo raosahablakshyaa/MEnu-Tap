@@ -6,6 +6,7 @@ import { CustomerSession } from '../models/customerSession.model';
 import { Restaurant } from '../models/restaurant.model';
 import { MenuItem } from '../models/menuItem.model';
 import { CustomerFeedback } from '../models/customerFeedback.model';
+import { GstInvoice } from '../models/gstInvoice.model';
 import { NotFoundError, BadRequestError } from '../utils/errors';
 import { generateNumber } from '../utils/pagination';
 import { emitToRestaurant } from '../socket';
@@ -37,7 +38,7 @@ export class OrderService {
     if (!cart || cart.items.length === 0) throw new BadRequestError('Cart is empty');
 
     const restaurant = await Restaurant.findById(session.restaurantId).select(
-      'name operationalInfo'
+      'name operationalInfo businessDetails address'
     );
     if (!restaurant) throw new NotFoundError('Restaurant not found');
 
@@ -109,6 +110,14 @@ export class OrderService {
     // Clear cart
     await Cart.deleteOne({ sessionId: input.sessionId });
 
+    try {
+      const invoice = await this.generateOrderInvoice(order._id.toString());
+      order.gstInvoiceId = invoice._id as Types.ObjectId;
+      order.gstInvoiceNumber = invoice.invoiceNumber;
+    } catch (error) {
+      logger.warn(`Invoice generation failed for order ${order.orderNumber}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
     // Emit to restaurant room → kitchen will pick it up
     emitToRestaurant(session.restaurantId.toString(), 'order:new', {
       orderId: order._id,
@@ -124,6 +133,75 @@ export class OrderService {
     logger.info(`Order placed: ${orderNumber} | Table: ${order.tableNumber} | Amount: ₹${totalAmount}`);
 
     return order;
+  }
+
+  /** Generate a GST invoice for an order. Safe to call multiple times. */
+  async generateOrderInvoice(orderId: string) {
+    const existing = await GstInvoice.findOne({ orderId });
+    if (existing) return existing;
+
+    const order = await Order.findById(orderId);
+    if (!order) throw new NotFoundError('Order not found');
+
+    const restaurant = await Restaurant.findById(order.restaurantId).select('name businessDetails address');
+    if (!restaurant) throw new NotFoundError('Restaurant not found');
+
+    const totalTaxRate = order.subtotal > 0 ? (order.taxAmount / order.subtotal) * 100 : 0;
+    const items = order.items.map((item) => {
+      const share = order.subtotal > 0 ? item.subtotal / order.subtotal : 0;
+      const itemTax = parseFloat((order.taxAmount * share).toFixed(2));
+      const halfTax = parseFloat((itemTax / 2).toFixed(2));
+
+      return {
+        description: item.name,
+        quantity: item.quantity,
+        unit: 'nos',
+        unitPrice: item.price,
+        taxableAmount: item.subtotal,
+        gstRate: parseFloat(totalTaxRate.toFixed(2)),
+        cgstAmount: halfTax,
+        sgstAmount: parseFloat((itemTax - halfTax).toFixed(2)),
+        igstAmount: 0,
+        totalAmount: parseFloat((item.subtotal + itemTax).toFixed(2)),
+      };
+    });
+
+    const address = restaurant.address;
+    const sellerAddress = [
+      address?.street,
+      address?.city,
+      address?.state,
+      address?.postalCode,
+      address?.country,
+    ].filter(Boolean).join(', ') || 'Restaurant address';
+
+    const invoice = await GstInvoice.create({
+      restaurantId: order.restaurantId,
+      orderId: order._id,
+      invoiceNumber: generateNumber('INV'),
+      invoiceType: 'B2C',
+      invoiceDate: new Date(),
+      status: 'issued',
+      sellerName: restaurant.name,
+      sellerGST: restaurant.businessDetails?.gstNumber || 'UNREGISTERED',
+      sellerAddress,
+      buyerName: order.customerName,
+      items,
+      subtotal: order.subtotal,
+      totalCgst: parseFloat((order.taxAmount / 2).toFixed(2)),
+      totalSgst: parseFloat((order.taxAmount - order.taxAmount / 2).toFixed(2)),
+      totalIgst: 0,
+      totalTax: order.taxAmount,
+      roundOff: 0,
+      grandTotal: order.totalAmount,
+      amountInWords: `INR ${order.totalAmount.toFixed(2)}`,
+    });
+
+    order.gstInvoiceId = invoice._id as Types.ObjectId;
+    order.gstInvoiceNumber = invoice.invoiceNumber;
+    await order.save();
+
+    return invoice;
   }
 
   /** Get a single order by ID (customer-facing, session-gated) */
@@ -192,6 +270,16 @@ export class OrderService {
     }
 
     await order.save();
+
+    if (!order.gstInvoiceNumber && order.status !== 'cancelled') {
+      try {
+        const invoice = await this.generateOrderInvoice(order._id.toString());
+        order.gstInvoiceId = invoice._id as Types.ObjectId;
+        order.gstInvoiceNumber = invoice.invoiceNumber;
+      } catch (error) {
+        logger.warn(`Invoice generation failed for order ${order.orderNumber}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
 
     // Emit to restaurant room (KDS + customer tracking)
     emitToRestaurant(restaurantId, 'order:statusUpdate', {
